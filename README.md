@@ -13,7 +13,7 @@ A production-ready autonomous red team orchestrator with 10 integrated subsystem
 - **State Management** — TargetMission state flows through entire kill chain with validation at each step
 - **Feedback Loops** — STRIKE results feed back to SELECT for adaptive payload re-selection
 - **Comprehensive Reporting** — JSON + markdown output with MITRE ATT&CK technique mapping, dual-signed reports
-- **130+ Tests** — Full coverage of all 10 subsystems and negative cases
+- **68 Tests** — Full coverage of all 10 subsystems and gate enforcement
 - **Pure Python** — No subprocess calls, no external tool dependencies, real library integrations
 
 ## Installation
@@ -136,7 +136,7 @@ Each subsystem:
 
 ## Testing
 
-Run all 130+ tests:
+Run all 68 tests:
 
 ```bash
 pytest tests/test_specter_raven.py -v
@@ -196,7 +196,7 @@ This tool is for **authorized security testing only**. Unauthorized access to co
 
 ## Part of NIGHTFALL
 
-SPECTER RAVEN is tool **#171** in the [NIGHTFALL](https://red-specter.co.uk/nightfall/) offensive framework — 40+ tools, 50,000+ tests, autonomous attack orchestration.
+SPECTER RAVEN is tool **#171** in the [NIGHTFALL](https://red-specter.co.uk/nightfall/) offensive framework — 92 tools, 105,429+ tests, autonomous attack orchestration.
 
 ---
 
