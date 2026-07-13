@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "red-specter-raven"
+name = "specter-raven-ce"
 version = "1.0.0"
-description = "SPECTER RAVEN — Autonomous Traditional Red Team Platform (T171)"
+description = "SPECTER RAVEN CE — See what an autonomous red team sees when it looks at your infrastructure"
 readme = "README.md"
-license = {text = "Proprietary"}
+license = {text = "MIT"}
 requires-python = ">=3.11"
-authors = [{name = "Red Specter Security Research Ltd", email = "richard@red-specter.co.uk"}]
-keywords = ["ai-security", "red-team", "autonomous-attack", "deepsomething", "threat-intelligence"]
+authors = [{name = "Richard Barron", email = "richard@red-specter.co.uk"}]
+keywords = ["security", "recon", "enumeration", "infrastructure", "assessment"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
@@ -28,8 +28,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpu = ["torch>=2.0.0", "transformers>=4.30.0"]
-ai = ["openai>=1.0.0", "anthropic>=0.7.0"]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
@@ -40,7 +38,7 @@ dev = [
 ]
 
 [project.scripts]
-raven = "raven.cli:main"
+specter-raven = "raven.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["raven*"]

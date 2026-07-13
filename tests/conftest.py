@@ -1,4 +1,4 @@
-"""SPECTER RAVEN — Test Configuration (T171)."""
+"""SPECTER RAVEN CE — Test Configuration."""
 import pytest
 from raven.models import TargetMission, GateLevel
 from raven.gate import RavenKey
@@ -16,18 +16,8 @@ def test_mission():
 
 
 @pytest.fixture
-def test_mission_strike():
-    """Create test mission with STRIKE gate."""
-    return TargetMission(
-        mission_id="test-mission-strike",
-        target_ip="192.168.1.2",
-        gate_level=GateLevel.STRIKE,
-    )
-
-
-@pytest.fixture
 def test_raven_key():
-    """Create test RAVEN_KEY."""
+    """Create test RAVEN_KEY (placeholder for CE edition)."""
     return RavenKey(
         ed25519_private=bytes(range(32)),
         ed25519_public=bytes(range(32, 64)),
@@ -36,14 +26,3 @@ def test_raven_key():
         key_id="test-key",
         created_at=time.time(),
     )
-
-
-@pytest.fixture
-def test_mission_unleashed(test_raven_key):
-    """Create test mission with UNLEASHED gate."""
-    mission = TargetMission(
-        mission_id="test-mission-unleashed",
-        target_ip="192.168.1.3",
-        gate_level=GateLevel.UNLEASHED,
-    )
-    return mission

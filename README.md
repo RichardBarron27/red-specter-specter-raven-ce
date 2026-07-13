@@ -1,205 +1,172 @@
-# SPECTER RAVEN (T171)
+# SPECTER RAVEN CE
 
-**Autonomous Traditional Red Team Platform**
+**See what an autonomous red team sees when it looks at your infrastructure.**
 
-A production-ready autonomous red team orchestrator with 10 integrated subsystems, real tool orchestration (ORION/WRAITH/REAPER/GHOUL/DOMINION/RAPTOR/FEDERATION), AI-driven decision making (DeepSeek R1), and comprehensive kill-chain validation.
+SPECTER RAVEN CE is a pure-Python infrastructure reconnaissance and enumeration tool that performs the visibility phase of a red team assessment. It shows you what's exposed, what's running, and what's listening — without any offensive capabilities.
+
+Engineered by **Richard Barron** | Red Specter Security Research Ltd
 
 ## Features
 
-- **10 Autonomous Subsystems** — RECON → ENUMERATE → ASSESS → SELECT → STRIKE → ESCALATE → SPREAD → PERSIST → HARVEST → REPORT
-- **Real Tool Orchestration** — ORION async scanning, WRAITH stealth enumeration, REAPER payload delivery, GHOUL CVE mapping, DOMINION persistence/harvesting, RAPTOR escalation, FEDERATION lateral movement
-- **AI-Driven Decisions** — DeepSeek R1 for strategic payload selection, PRION GPU mutation for WAF evasion, FOUNDRY fallback for novel exploits
-- **Gate Enforcement** — OPEN (development), STRIKE (authorized pentest), UNLEASHED (autonomous) with Ed25519 + ML-DSA-65 dual-key cryptography
-- **State Management** — TargetMission state flows through entire kill chain with validation at each step
-- **Feedback Loops** — STRIKE results feed back to SELECT for adaptive payload re-selection
-- **Comprehensive Reporting** — JSON + markdown output with MITRE ATT&CK technique mapping, dual-signed reports
-- **68 Tests** — Full coverage of all 10 subsystems and gate enforcement
-- **Pure Python** — No subprocess calls, no external tool dependencies, real library integrations
+- **Port Scanning** — Async port scanning with TCP connect (no wrappers, no Nmap dependency)
+- **OS Detection** — Fingerprint operating systems from network behavior
+- **Service Enumeration** — Detect service types and versions
+- **TLS Certificate Parsing** — Extract certificate details and vhost information
+- **Virtual Host Discovery** — Identify vhosts through TLS SNI
+- **Clean Output** — JSON and markdown reports
+- **Pure Python** — Single dependency on `typer`, `rich`, `pydantic` — no external tool calls
+- **Fast** — Async I/O for concurrent scanning and enumeration
+- **Zero Stubs** — No offline validation, no stubbed implementations
+
+## Positioning
+
+**Nmap shows you open ports. SPECTER RAVEN CE shows you what's actually running on them** — with OS detection, service fingerprinting, TLS analysis, and vhost discovery. All in one command.
+
+This is a **defensive tool for security teams** to understand their exposure from the same angle a red team would. Full autonomous red team capability (RAVEN) is available for authorized engagements only through Red Specter.
 
 ## Installation
 
 ```bash
-pip install red-specter-raven
-```
-
-With GPU acceleration and AI models:
-
-```bash
-pip install red-specter-raven[gpu,ai]
+pip install specter-raven-ce
 ```
 
 ## Usage
 
-### Launch Autonomous Red Team
+### Scan for Open Ports and OS Detection
 
 ```bash
-# OPEN gate (development/testing)
-raven run 192.168.1.1 --gate OPEN
+specter-raven scan 192.168.1.1
 
-# STRIKE gate (authorized pentest with payload validation)
-raven run 192.168.1.1 --gate STRIKE
+# Scan specific ports
+specter-raven scan 192.168.1.1 --ports 80,443,22,3306
 
-# UNLEASHED gate (full autonomous, requires RAVEN_KEY)
-raven run 192.168.1.1 --gate UNLEASHED
+# Save to JSON
+specter-raven scan 192.168.1.1 --output scan.json
 
-# With GPU acceleration and custom AI model
-raven run 192.168.1.1 --gate UNLEASHED --gpu --model deepseek-r1
-
-# Save reports to directory
-raven run 192.168.1.1 --gate OPEN --output ./reports
+# Save to Markdown
+specter-raven scan 192.168.1.1 --output scan.md
 ```
 
-### Generate RAVEN_KEY for UNLEASHED Operations
+### Enumerate Services
 
 ```bash
-raven keygen --output ~/.redspecter/raven_key
+# Fingerprint services on detected ports
+specter-raven enumerate 192.168.1.1 --ports 80,443
+
+# Get TLS certificate details
+specter-raven enumerate 192.168.1.1 --ports 443
+
+# Save results
+specter-raven enumerate 192.168.1.1 --output enum.json
 ```
 
-This generates Ed25519 + ML-DSA-65 keypair for UNLEASHED gate enforcement.
-
-## Gate Levels
-
-### OPEN
-- Development and testing mode
-- No restrictions on subsystem execution
-- No cryptographic key requirements
-- Useful for tool development and testing
-
-### STRIKE
-- Authorized penetration testing
-- Payload validation required before execution
-- No key requirements
-- Intended for authorized security assessments
-
-### UNLEASHED
-- Full autonomous red team operations
-- Requires valid RAVEN_KEY (Ed25519 + ML-DSA-65)
-- All subsystems enabled with key enforcement
-- Intended for authorized, fully autonomous operations
-
-## 10 Subsystems
-
-### RAVEN-RECON
-Reconnaissance via ORION async scanner (1-65535 ports, OS fingerprinting, timeout handling)
-
-### RAVEN-ENUMERATE
-Stealth enumeration via WRAITH (TLS cert parsing, vhost discovery, banner grabbing)
-
-### RAVEN-ASSESS
-Vulnerability assessment via GHOUL (CVE mapping, CVSS scoring, exploitability ranking)
-
-### RAVEN-SELECT
-Payload selection via DeepSeek R1 (strategic decision making, PRION mutation, FOUNDRY fallback)
-
-### RAVEN-STRIKE
-Payload delivery via REAPER (result validation, adaptive retry via feedback to SELECT)
-
-### RAVEN-ESCALATE
-Privilege escalation via RAPTOR (Linux kernel exploits, Windows token abuse, AD attacks)
-
-### RAVEN-SPREAD
-Lateral movement via FEDERATION (SMB/RDP/SSH, Kerberos, Pass-the-Hash, Pass-the-Ticket)
-
-### RAVEN-PERSIST
-Persistence via DOMINION (cron/systemd/scheduled tasks/services/registry)
-
-### RAVEN-HARVEST
-Data harvesting via DOMINION (shadow/LSASS/SAM/DCSync/browser creds/SSH keys/API keys)
-
-### RAVEN-REPORT
-Report generation (JSON + markdown, MITRE ATT&CK mapping, dual-signed with Ed25519 + ML-DSA-65)
-
-## Architecture
-
-```
-TargetMission (state object)
-├── RECON: Target discovery
-├── ENUMERATE: Service enumeration
-├── ASSESS: Vulnerability assessment
-├── SELECT: Payload selection (AI-driven)
-├── STRIKE: Exploitation
-│   └── Feedback → SELECT (adaptive)
-├── ESCALATE: Privilege escalation
-├── SPREAD: Lateral movement
-├── PERSIST: Persistence installation
-├── HARVEST: Data exfiltration
-└── REPORT: Report generation & signing
-```
-
-Each subsystem:
-1. Validates gate level
-2. Checks mission state prerequisites
-3. Executes phase-specific operations
-4. Updates TargetMission state
-5. Records phase timing
-6. Halts mission on critical errors
-
-## Testing
-
-Run all 68 tests:
+### Generate Report
 
 ```bash
-pytest tests/test_specter_raven.py -v
+# Create findings report from scan results
+specter-raven report 192.168.1.1 --from-json scan.json --output report.md
 ```
 
-Run tests by category:
+## What's Included
+
+### Subsystems
+
+- **Recon** — Port scanning, TCP fingerprinting, OS detection
+- **Enumerate** — Service version detection, TLS parsing, vhost discovery
+- **Report** — Findings summary adapted for defensive use
+
+### Gate
+
+- **OPEN** — Default gate level, no restrictions, no key requirements
+
+## What's NOT Included
+
+This CE edition is strictly defensive:
+
+- ❌ No vulnerability exploitation
+- ❌ No payload delivery
+- ❌ No privilege escalation
+- ❌ No lateral movement
+- ❌ No credential harvesting
+- ❌ No persistence mechanisms
+
+## Examples
+
+### Scan Internal Network
 
 ```bash
-pytest tests/test_specter_raven.py::TestGateEnforcement -v
-pytest tests/test_specter_raven.py::TestReconSubsystem -v
-pytest tests/test_specter_raven.py::TestIntegration -v
+specter-raven scan 192.168.1.1 \
+  --ports 80,443,22,25,3306,5432,6379,8080,8443 \
+  --output internal-scan.json
 ```
 
-Run with coverage:
+### Enumerate Web Servers
 
 ```bash
-pytest tests/test_specter_raven.py --cov=raven --cov-report=html
+specter-raven enumerate 192.168.1.1 \
+  --ports 80,8080,8443 \
+  --output web-services.md
+```
+
+### Generate Security Assessment
+
+```bash
+specter-raven scan 10.0.0.0/24 --output network-scan.json
+specter-raven report 10.0.0.0/24 --from-json network-scan.json --output report.md
+```
+
+## Output Format
+
+### JSON
+
+```json
+{
+  "target": "192.168.1.1",
+  "ports": {
+    "22": "ssh",
+    "80": "http",
+    "443": "https"
+  },
+  "os": "Linux 5.10.0",
+  "timestamp": "2024-01-01T12:00:00"
+}
+```
+
+### Markdown
+
+```markdown
+# Scan Results for 192.168.1.1
+
+**Timestamp:** 2024-01-01T12:00:00
+
+## Open Ports
+
+- Port 22: ssh
+- Port 80: http
+- Port 443: https
+
+## OS
+
+Linux 5.10.0
 ```
 
 ## Requirements
 
 - Python 3.11+
-- typer >= 0.9.0
-- rich >= 13.0.0
-- pydantic >= 2.0.0
-- cryptography >= 41.0.0
-- requests >= 2.31.0
+- `typer` — CLI framework
+- `rich` — Beautiful terminal output
+- `pydantic` — Data validation
 
-Optional:
-- torch >= 2.0.0 (GPU acceleration)
-- transformers >= 4.30.0 (AI models)
+## License
 
-## Security
+MIT
 
-- **No External Tool Dependencies** — Pure Python implementation, no subprocess calls
-- **Dual-Key Cryptography** — Ed25519 (ECDSA) + ML-DSA-65 (post-quantum) signing
-- **Gate Enforcement** — Cryptographic key validation at gate entry points
-- **State Validation** — Each subsystem validates prerequisite state before execution
-- **Error Halting** — Critical errors halt mission execution immediately
+## Responsible Disclosure
 
-## MITRE ATT&CK Mapping
+Full RAVEN autonomous red team capability is available for authorized penetration testing and red team engagements only. This CE edition is for infrastructure visibility and defensive security assessment.
 
-SPECTER RAVEN maps kill-chain activities to MITRE ATT&CK framework:
-
-- **RECON**: T1592.004 (Gather Victim Host Information)
-- **ENUMERATE**: T1046 (Network Service Discovery)
-- **ASSESS**: Vulnerability scanning correlation
-- **STRIKE**: T1190, T1200 (Exploitation)
-- **ESCALATE**: T1548, T1134, T1401 (Privilege Escalation)
-- **SPREAD**: T1570, T1021 (Lateral Movement)
-- **PERSIST**: T1547, T1547.006 (Autostart Execution)
-- **HARVEST**: T1005, T1056.004 (Data Exfiltration)
-
-## Responsible Use
-
-This tool is for **authorized security testing only**. Unauthorized access to computer systems is illegal under the Computer Misuse Act 1990 (UK) and equivalent legislation worldwide.
-
-## Part of NIGHTFALL
-
-SPECTER RAVEN is tool **#171** in the [NIGHTFALL](https://red-specter.co.uk/nightfall/) offensive framework — 92 tools, 105,429+ tests, autonomous attack orchestration.
+To conduct authorized security assessments with full autonomous red team capability, contact Red Specter Security Research Ltd.
 
 ---
 
-**Red Specter Security Research Ltd**  
-[red-specter.co.uk](https://red-specter.co.uk)  
-Autonomous red teaming. Zero questions asked.
+**SPECTER RAVEN CE v1.0.0** | Engineered by Richard Barron | Red Specter Security Research Ltd

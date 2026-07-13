@@ -1,4 +1,4 @@
-"""SPECTER RAVEN — Autonomous Red Team Platform CLI (T171)."""
+"""SPECTER RAVEN CE — Autonomous Infrastructure Reconnaissance and Enumeration CLI."""
 from __future__ import annotations
 import asyncio
 import json
@@ -12,28 +12,20 @@ import uuid
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.text import Text
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from .models import TargetMission, GateLevel
-from .gate import GateViolation, RavenKey
+from .models import GateLevel
+from .gate import GateEnforcer
 from .subsystems import (
     ReconSubsystem,
     EnumerateSubsystem,
-    AssessSubsystem,
-    SelectSubsystem,
-    StrikeSubsystem,
-    EscalateSubsystem,
-    SpreadSubsystem,
-    PersistSubsystem,
-    HarvestSubsystem,
     ReportSubsystem,
 )
 
 __version__ = "1.0.0"
 
-app = typer.Typer(name="raven", help="SPECTER RAVEN — Autonomous Red Team Platform", no_args_is_help=True)
+app = typer.Typer(name="specter-raven", help="SPECTER RAVEN CE — Infrastructure Reconnaissance", no_args_is_help=True)
 console = Console()
 ACCENT = "#FF0000"
 
@@ -41,305 +33,221 @@ ACCENT = "#FF0000"
 def _banner():
     """Display banner."""
     t = Text()
-    t.append("SPECTER RAVEN ", style=f"bold {ACCENT}")
-    t.append(f"v{__version__}\n", style="dim")
-    t.append("Autonomous Traditional Red Team Platform\n", style=ACCENT)
-    t.append("Red Specter Security Research Ltd", style="dim")
-    return Panel(t, border_style=ACCENT, expand=False)
+    t.append("╔══════════════════════════════════════════════════════╗\n", style=f"{ACCENT}")
+    t.append("║  SPECTER RAVEN CE                                   ║\n", style=f"{ACCENT}")
+    t.append("║  See what an autonomous red team sees.              ║\n", style="dim")
+    t.append("║  Engineered by Richard Barron                       ║\n", style="dim")
+    t.append("║  Red Specter Security Research Ltd                 ║\n", style="dim")
+    t.append("╚══════════════════════════════════════════════════════╝\n", style=f"{ACCENT}")
+    return t
 
 
 @app.command()
-def run(
-    target: str = typer.Argument(..., help="Target IP or CIDR range"),
-    gate: str = typer.Option("OPEN", "--gate", "-g", help="Gate level (OPEN/STRIKE/UNLEASHED)"),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output directory for reports"),
-    gpu: bool = typer.Option(False, "--gpu", help="Enable GPU acceleration (PRION mutations)"),
-    model: str = typer.Option("deepseek-r1", "--model", "-m", help="AI model for decisions"),
+def scan(
+    target: str = typer.Argument(..., help="Target IP or hostname"),
+    ports: str = typer.Option("80,443,22,25,3306,5432,6379,8080,8443", "--ports", "-p", help="Ports to scan"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file (JSON/Markdown)"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress detailed output"),
 ):
-    """Launch autonomous red team mission against target."""
-    console.print(_banner())
+    """Scan target for open ports and OS detection."""
+    if not quiet:
+        console.print(_banner())
 
-    # Validate gate level
-    try:
-        gate_level = GateLevel[gate.upper()]
-    except KeyError:
-        console.print(f"[red]Invalid gate level: {gate}[/red]")
-        sys.exit(1)
-
-    # Create mission
-    mission_id = str(uuid.uuid4())[:8]
-    mission = TargetMission(
-        mission_id=mission_id,
-        target_ip=target,
-        gate_level=gate_level,
-        created_at=datetime.now(),
-    )
-
-    console.print(f"\n[bold cyan]Mission ID:[/bold cyan] {mission_id}")
     console.print(f"[bold cyan]Target:[/bold cyan] {target}")
-    console.print(f"[bold cyan]Gate Level:[/bold cyan] {gate_level.value}")
-    console.print(f"[bold cyan]AI Model:[/bold cyan] {model}")
-    if gpu:
-        console.print(f"[bold cyan]GPU Acceleration:[/bold cyan] Enabled")
+    console.print(f"[bold cyan]Ports:[/bold cyan] {ports}")
     console.print()
 
-    # Load RAVEN_KEY if UNLEASHED
-    raven_key = None
-    if gate_level == GateLevel.UNLEASHED:
-        raven_key = _load_raven_key()
-        if not raven_key:
-            console.print("[red]UNLEASHED gate requires RAVEN_KEY.[/red]")
-            console.print("Generate with: raven keygen --output ~/.redspecter/raven_key")
-            sys.exit(1)
-
-    # Execute kill chain
+    # Parse ports
     try:
-        _execute_kill_chain(mission, raven_key, output, quiet)
-    except GateViolation as e:
-        console.print(f"[red]Gate Violation:[/red] {str(e)}")
-        sys.exit(1)
-    except Exception as e:
-        console.print(f"[red]Mission Failed:[/red] {str(e)}")
+        port_list = [int(p.strip()) for p in ports.split(",")]
+    except ValueError:
+        console.print("[red]Invalid port list[/red]")
         sys.exit(1)
 
-
-def _execute_kill_chain(
-    mission: TargetMission,
-    raven_key: Optional[RavenKey],
-    output_dir: Optional[str],
-    quiet: bool,
-) -> None:
-    """Execute all 10 subsystems in kill chain order."""
-    start_time = time.time()
+    enforcer = GateEnforcer(GateLevel.OPEN)
+    recon = ReconSubsystem(enforcer=enforcer)
 
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=console if not quiet else None,
     ) as progress:
-        # RAVEN-RECON
-        task = progress.add_task("[cyan]RAVEN-RECON: Reconnaissance...", total=None)
+        task = progress.add_task("[cyan]Scanning ports...", total=None)
         try:
-            recon = ReconSubsystem(mission)
-            asyncio.run(recon.execute())
+            result = asyncio.run(recon.scan_ports(target, ports=port_list))
             progress.update(task, completed=True)
         except Exception as e:
-            console.print(f"[red]RECON failed: {str(e)}[/red]")
-            mission.halt(f"RECON failed: {str(e)}")
-            return
+            console.print(f"[red]Scan failed: {str(e)}[/red]")
+            sys.exit(1)
 
-        # RAVEN-ENUMERATE
-        task = progress.add_task("[cyan]RAVEN-ENUMERATE: Enumeration...", total=None)
+        task = progress.add_task("[cyan]Detecting OS...", total=None)
         try:
-            enumerate_sys = EnumerateSubsystem(mission)
-            enumerate_sys.execute()
+            os_result = asyncio.run(recon.detect_os(target))
             progress.update(task, completed=True)
         except Exception as e:
-            console.print(f"[red]ENUMERATE failed: {str(e)}[/red]")
-            mission.halt(f"ENUMERATE failed: {str(e)}")
-            return
+            os_result = None
 
-        # RAVEN-ASSESS
-        task = progress.add_task("[cyan]RAVEN-ASSESS: Vulnerability Assessment...", total=None)
-        try:
-            assess = AssessSubsystem(mission)
-            assess.execute()
-            progress.update(task, completed=True)
-        except Exception as e:
-            console.print(f"[red]ASSESS failed: {str(e)}[/red]")
-            mission.halt(f"ASSESS failed: {str(e)}")
-            return
-
-        # RAVEN-SELECT
-        task = progress.add_task("[cyan]RAVEN-SELECT: Payload Selection...", total=None)
-        try:
-            select = SelectSubsystem(mission)
-            select.execute()
-            progress.update(task, completed=True)
-        except Exception as e:
-            console.print(f"[red]SELECT failed: {str(e)}[/red]")
-            mission.halt(f"SELECT failed: {str(e)}")
-            return
-
-        # RAVEN-STRIKE
-        task = progress.add_task("[red]RAVEN-STRIKE: Payload Delivery...", total=None)
-        try:
-            strike = StrikeSubsystem(mission)
-            strike.execute()
-            progress.update(task, completed=True)
-        except Exception as e:
-            console.print(f"[red]STRIKE failed: {str(e)}[/red]")
-            mission.halt(f"STRIKE failed: {str(e)}")
-            return
-
-        # RAVEN-ESCALATE
-        task = progress.add_task("[red]RAVEN-ESCALATE: Privilege Escalation...", total=None)
-        try:
-            escalate = EscalateSubsystem(mission)
-            escalate.execute()
-            progress.update(task, completed=True)
-        except Exception as e:
-            console.print(f"[red]ESCALATE failed: {str(e)}[/red]")
-            mission.halt(f"ESCALATE failed: {str(e)}")
-            return
-
-        # RAVEN-SPREAD
-        task = progress.add_task("[red]RAVEN-SPREAD: Lateral Movement...", total=None)
-        try:
-            spread = SpreadSubsystem(mission)
-            spread.execute()
-            progress.update(task, completed=True)
-        except Exception as e:
-            console.print(f"[red]SPREAD failed: {str(e)}[/red]")
-            mission.halt(f"SPREAD failed: {str(e)}")
-            return
-
-        # RAVEN-PERSIST
-        task = progress.add_task("[red]RAVEN-PERSIST: Persistence...", total=None)
-        try:
-            persist = PersistSubsystem(mission)
-            persist.execute()
-            progress.update(task, completed=True)
-        except Exception as e:
-            console.print(f"[red]PERSIST failed: {str(e)}[/red]")
-            mission.halt(f"PERSIST failed: {str(e)}")
-            return
-
-        # RAVEN-HARVEST
-        task = progress.add_task("[red]RAVEN-HARVEST: Data Harvesting...", total=None)
-        try:
-            harvest = HarvestSubsystem(mission)
-            harvest.execute()
-            progress.update(task, completed=True)
-        except Exception as e:
-            console.print(f"[red]HARVEST failed: {str(e)}[/red]")
-            mission.halt(f"HARVEST failed: {str(e)}")
-            return
-
-        # RAVEN-REPORT
-        task = progress.add_task("[cyan]RAVEN-REPORT: Report Generation...", total=None)
-        try:
-            report_sys = ReportSubsystem(mission, raven_key)
-            report = report_sys.execute()
-            progress.update(task, completed=True)
-
-            # Save reports
-            if output_dir:
-                _save_reports(mission.mission_id, report, report_sys, output_dir)
-
-        except Exception as e:
-            console.print(f"[red]REPORT failed: {str(e)}[/red]")
-            mission.halt(f"REPORT failed: {str(e)}")
-            return
-
-    # Summary
-    duration_sec = time.time() - start_time
+    # Display results
     console.print()
-    console.print("[bold cyan]Mission Complete[/bold cyan]")
-    console.print(f"[cyan]Duration:[/cyan] {duration_sec:.1f}s")
-    console.print(f"[cyan]Status:[/cyan] {'Halted' if mission.halted else 'Completed'}")
-    if mission.halted:
-        console.print(f"[cyan]Halt Reason:[/cyan] {mission.halt_reason}")
+    console.print("[bold cyan]Scan Results[/bold cyan]")
+    if result:
+        for port, service in sorted(result.items()):
+            console.print(f"  Port {port}: {service}")
 
+    if os_result:
+        console.print(f"[cyan]OS:[/cyan] {os_result}")
 
-def _load_raven_key() -> Optional[RavenKey]:
-    """Load RAVEN_KEY from disk."""
-    key_path = Path.home() / ".redspecter" / "raven_key"
-    if not key_path.exists():
-        return None
+    # Save if requested
+    if output:
+        data = {
+            "target": target,
+            "ports": result,
+            "os": os_result,
+            "timestamp": datetime.now().isoformat(),
+        }
+        output_path = Path(output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
-        with open(key_path, "rb") as f:
-            data = json.load(f)
+        if output.endswith(".json"):
+            with open(output_path, "w") as f:
+                json.dump(data, f, indent=2)
+        else:
+            with open(output_path, "w") as f:
+                f.write(f"# Scan Results for {target}\n\n")
+                f.write(f"**Timestamp:** {data['timestamp']}\n\n")
+                f.write("## Open Ports\n\n")
+                for port, service in sorted(result.items()):
+                    f.write(f"- Port {port}: {service}\n")
+                if os_result:
+                    f.write(f"\n## OS\n\n{os_result}\n")
 
-        return RavenKey(
-            ed25519_private=bytes.fromhex(data["ed25519_private"]),
-            ed25519_public=bytes.fromhex(data["ed25519_public"]),
-            ml_dsa_65_private=bytes.fromhex(data["ml_dsa_65_private"]),
-            ml_dsa_65_public=bytes.fromhex(data["ml_dsa_65_public"]),
-            key_id=data.get("key_id", ""),
-        )
-    except Exception:
-        return None
-
-
-def _save_reports(mission_id: str, report, report_sys, output_dir: str) -> None:
-    """Save JSON and markdown reports."""
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    # Save JSON
-    json_file = output_path / f"raven-{mission_id}.json"
-    with open(json_file, "w") as f:
-        f.write(report_sys.to_json(report))
-
-    # Save Markdown
-    md_file = output_path / f"raven-{mission_id}.md"
-    with open(md_file, "w") as f:
-        f.write(report_sys.to_markdown(report))
-
-    console.print(f"[cyan]Reports saved:[/cyan] {output_path}")
+        console.print(f"[cyan]Results saved:[/cyan] {output_path}")
 
 
 @app.command()
-def keygen(
-    output: str = typer.Option("~/.redspecter/raven_key", "--output", "-o", help="Output path for RAVEN_KEY"),
+def enumerate(
+    target: str = typer.Argument(..., help="Target IP or hostname"),
+    ports: str = typer.Option("80,443", "--ports", "-p", help="Ports to enumerate"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file (JSON/Markdown)"),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress detailed output"),
 ):
-    """Generate Ed25519 + ML-DSA-65 keypair for UNLEASHED operations."""
-    console.print(_banner())
-    console.print("\n[bold]Generating RAVEN_KEY...[/bold]\n")
+    """Enumerate services, versions, and TLS certificates."""
+    if not quiet:
+        console.print(_banner())
 
+    console.print(f"[bold cyan]Target:[/bold cyan] {target}")
+    console.print(f"[bold cyan]Ports:[/bold cyan] {ports}")
+    console.print()
+
+    # Parse ports
     try:
-        # Generate Ed25519 keypair (32 bytes each)
-        ed25519_private = bytes(range(32))  # In production: use cryptography.hazmat.primitives
-        ed25519_public = bytes(range(32, 64))
+        port_list = [int(p.strip()) for p in ports.split(",")]
+    except ValueError:
+        console.print("[red]Invalid port list[/red]")
+        sys.exit(1)
 
-        # Generate ML-DSA-65 keypair (2400 + 1312 bytes)
-        ml_dsa_65_private = bytes(range(2400))
-        ml_dsa_65_public = bytes(range(1312))
+    enforcer = GateEnforcer(GateLevel.OPEN)
+    enum_sys = EnumerateSubsystem(enforcer=enforcer)
 
-        key = RavenKey(
-            ed25519_private=ed25519_private,
-            ed25519_public=ed25519_public,
-            ml_dsa_65_private=ml_dsa_65_private,
-            ml_dsa_65_public=ml_dsa_65_public,
-            key_id=str(uuid.uuid4())[:8],
-            created_at=time.time(),
-        )
+    results = {}
 
-        # Save key
-        output_path = Path(output).expanduser()
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console if not quiet else None,
+    ) as progress:
+        for port in port_list:
+            service = "http" if port in [80, 8080] else "https" if port in [443, 8443] else "unknown"
+            task = progress.add_task(f"[cyan]Enumerating port {port}...", total=None)
+            try:
+                fingerprint = asyncio.run(enum_sys.fingerprint_service(target, port, service))
+                tls = asyncio.run(enum_sys.parse_tls_cert(target, port)) if port in [443, 8443] else None
+                results[port] = {
+                    "fingerprint": fingerprint,
+                    "tls": tls,
+                }
+                progress.update(task, completed=True)
+            except Exception as e:
+                results[port] = {"error": str(e)}
+                progress.update(task, completed=True)
+
+    # Display results
+    console.print()
+    console.print("[bold cyan]Enumeration Results[/bold cyan]")
+    for port, data in sorted(results.items()):
+        console.print(f"\n[bold]Port {port}[/bold]")
+        if "error" in data:
+            console.print(f"  [yellow]Error: {data['error']}[/yellow]")
+        else:
+            console.print(f"  Fingerprint: {json.dumps(data.get('fingerprint', {}), indent=2)[:100]}...")
+            if data.get('tls'):
+                console.print(f"  TLS: Found")
+
+    # Save if requested
+    if output:
+        output_path = Path(output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        key_data = {
-            "key_id": key.key_id,
-            "ed25519_private": key.ed25519_private.hex(),
-            "ed25519_public": key.ed25519_public.hex(),
-            "ml_dsa_65_private": key.ml_dsa_65_private.hex(),
-            "ml_dsa_65_public": key.ml_dsa_65_public.hex(),
-            "created_at": key.created_at,
-        }
+        if output.endswith(".json"):
+            with open(output_path, "w") as f:
+                json.dump(results, f, indent=2)
+        else:
+            with open(output_path, "w") as f:
+                f.write(f"# Enumeration Results for {target}\n\n")
+                f.write(f"**Timestamp:** {datetime.now().isoformat()}\n\n")
+                for port, data in sorted(results.items()):
+                    f.write(f"## Port {port}\n\n")
+                    if "error" in data:
+                        f.write(f"Error: {data['error']}\n\n")
+                    else:
+                        f.write(f"```json\n{json.dumps(data, indent=2)}\n```\n\n")
 
+        console.print(f"[cyan]Results saved:[/cyan] {output_path}")
+
+
+@app.command()
+def report(
+    target: str = typer.Argument(..., help="Target IP or hostname"),
+    json_file: Optional[str] = typer.Option(None, "--from-json", help="Load scan results from JSON file"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file"),
+):
+    """Generate findings report from scan/enumeration results."""
+    console.print(_banner())
+
+    console.print(f"[bold cyan]Target:[/bold cyan] {target}")
+
+    enforcer = GateEnforcer(GateLevel.OPEN)
+    report_sys = ReportSubsystem(enforcer=enforcer)
+
+    # Create target profile
+    from .models import TargetProfile
+    profile = TargetProfile(ip_address=target)
+
+    if json_file and Path(json_file).exists():
+        with open(json_file, "r") as f:
+            data = json.load(f)
+            profile.open_ports = data.get("ports", {})
+
+    findings = report_sys.generate_findings(profile)
+
+    console.print()
+    console.print("[bold cyan]Findings Report[/bold cyan]")
+    console.print(json.dumps(findings, indent=2))
+
+    if output:
+        output_path = Path(output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w") as f:
-            json.dump(key_data, f, indent=2)
-
-        output_path.chmod(0o600)
-
-        console.print(f"[green]✓ RAVEN_KEY generated[/green]")
-        console.print(f"[cyan]Key ID:[/cyan] {key.key_id}")
-        console.print(f"[cyan]Location:[/cyan] {output_path}")
-        console.print(f"[cyan]Permissions:[/cyan] 0600")
-
-    except Exception as e:
-        console.print(f"[red]Keygen failed: {str(e)}[/red]")
-        sys.exit(1)
+            f.write(f"# Findings Report - {target}\n\n")
+            f.write(f"**Generated:** {datetime.now().isoformat()}\n\n")
+            f.write(f"```json\n{json.dumps(findings, indent=2)}\n```\n")
+        console.print(f"[cyan]Report saved:[/cyan] {output_path}")
 
 
 @app.command()
 def version():
     """Display version information."""
-    console.print(f"SPECTER RAVEN v{__version__}")
+    console.print(f"SPECTER RAVEN CE v{__version__}")
 
 
 def main():
