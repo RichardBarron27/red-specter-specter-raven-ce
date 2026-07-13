@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "specter-raven-ce"
-version = "1.0.0"
+version = "1.0.1"
 description = "SPECTER RAVEN CE — See what an autonomous red team sees when it looks at your infrastructure"
 readme = "README.md"
 license = {text = "MIT"}
