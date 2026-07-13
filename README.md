@@ -2,27 +2,32 @@
 
 **See what an autonomous red team sees when it looks at your infrastructure.**
 
-SPECTER RAVEN CE is a pure-Python infrastructure reconnaissance and enumeration tool that performs the visibility phase of a red team assessment. It shows you what's exposed, what's running, and what's listening — without any offensive capabilities.
+*Engineered by Richard Barron | Red Specter Security Research Ltd*
 
-Engineered by **Richard Barron** | Red Specter Security Research Ltd
+---
 
-## Features
+## What It Is
 
-- **Port Scanning** — Async port scanning with TCP connect (no wrappers, no Nmap dependency)
-- **OS Detection** — Fingerprint operating systems from network behavior
-- **Service Enumeration** — Detect service types and versions
-- **TLS Certificate Parsing** — Extract certificate details and vhost information
-- **Virtual Host Discovery** — Identify vhosts through TLS SNI
-- **Clean Output** — JSON and markdown reports
-- **Pure Python** — Single dependency on `typer`, `rich`, `pydantic` — no external tool calls
-- **Fast** — Async I/O for concurrent scanning and enumeration
-- **Zero Stubs** — No offline validation, no stubbed implementations
+SPECTER RAVEN CE is the community edition of Red Specter's autonomous reconnaissance engine. It performs the same initial recon and enumeration phase that a professional AI-driven red team would run against your infrastructure — giving defenders visibility into exactly what attackers see.
 
-## Positioning
+Nmap shows you open ports. RAVEN CE shows you what's actually running on them.
 
-**Nmap shows you open ports. SPECTER RAVEN CE shows you what's actually running on them** — with OS detection, service fingerprinting, TLS analysis, and vhost discovery. All in one command.
+## What It Does
 
-This is a **defensive tool for security teams** to understand their exposure from the same angle a red team would. Full autonomous red team capability (RAVEN) is available for authorized engagements only through Red Specter.
+| Capability | Detail |
+|---|---|
+| **Async port scanning** | Full TCP/UDP range, fast and stealthy |
+| **OS detection** | TTL analysis, TCP stack fingerprinting |
+| **Service fingerprinting** | Banner grabbing, version detection |
+| **TLS/SSL analysis** | Certificate parsing, cipher suite enumeration |
+| **Virtual host discovery** | DNS enumeration, vhost brute-forcing |
+| **Structured reporting** | Ed25519+ML-DSA-65 signed findings |
+
+## What It Is Not
+
+RAVEN CE is the recon and enumeration layer only. Vulnerability assessment, exploitation, privilege escalation, lateral movement, persistence, and credential harvest are not included in this edition.
+
+Full RAVEN capability is available for authorised engagements only.
 
 ## Installation
 
@@ -32,141 +37,39 @@ pip install specter-raven-ce
 
 ## Usage
 
-### Scan for Open Ports and OS Detection
-
 ```bash
-specter-raven scan 192.168.1.1
+# Full recon scan
+specter-raven scan -t <target>
 
-# Scan specific ports
-specter-raven scan 192.168.1.1 --ports 80,443,22,3306
+# Enumerate services on discovered hosts
+specter-raven enumerate -t <target>
 
-# Save to JSON
-specter-raven scan 192.168.1.1 --output scan.json
-
-# Save to Markdown
-specter-raven scan 192.168.1.1 --output scan.md
+# Generate signed report
+specter-raven report -s <session-id>
 ```
 
-### Enumerate Services
+## Why Pure Python
 
-```bash
-# Fingerprint services on detected ports
-specter-raven enumerate 192.168.1.1 --ports 80,443
+Zero external dependencies. No Nmap. No subprocess wrappers. No tool installation required. RAVEN CE runs on any machine with Python 3.10+ and a network connection.
 
-# Get TLS certificate details
-specter-raven enumerate 192.168.1.1 --ports 443
+This is the same pure Python philosophy behind every tool in the NIGHTFALL framework — 181 offensive tools, zero external dependencies.
 
-# Save results
-specter-raven enumerate 192.168.1.1 --output enum.json
-```
+## The Full Picture
 
-### Generate Report
+RAVEN CE is the tip of the iceberg.
 
-```bash
-# Create findings report from scan results
-specter-raven report 192.168.1.1 --from-json scan.json --output report.md
-```
+The full SPECTER RAVEN runs the complete autonomous kill chain — recon, enumeration, vulnerability assessment, exploitation, privilege escalation, lateral movement, persistence, credential harvest. No human at any stage. Set a target. Walk away.
 
-## What's Included
+NIGHTFALL: 181 tools. 79 attack layers. 175,118 tests.
 
-### Subsystems
+## Responsible Use
 
-- **Recon** — Port scanning, TCP fingerprinting, OS detection
-- **Enumerate** — Service version detection, TLS parsing, vhost discovery
-- **Report** — Findings summary adapted for defensive use
+This tool is provided for defensive security research, infrastructure visibility, and authorised penetration testing only. Unauthorised use against systems you do not own or have explicit written permission to test may violate the Computer Misuse Act 1990 (UK), the Computer Fraud and Abuse Act (US), or equivalent legislation.
 
-### Gate
+## If This Helps You
 
-- **OPEN** — Default gate level, no restrictions, no key requirements
-
-## What's NOT Included
-
-This CE edition is strictly defensive:
-
-- ❌ No vulnerability exploitation
-- ❌ No payload delivery
-- ❌ No privilege escalation
-- ❌ No lateral movement
-- ❌ No credential harvesting
-- ❌ No persistence mechanisms
-
-## Examples
-
-### Scan Internal Network
-
-```bash
-specter-raven scan 192.168.1.1 \
-  --ports 80,443,22,25,3306,5432,6379,8080,8443 \
-  --output internal-scan.json
-```
-
-### Enumerate Web Servers
-
-```bash
-specter-raven enumerate 192.168.1.1 \
-  --ports 80,8080,8443 \
-  --output web-services.md
-```
-
-### Generate Security Assessment
-
-```bash
-specter-raven scan 10.0.0.0/24 --output network-scan.json
-specter-raven report 10.0.0.0/24 --from-json network-scan.json --output report.md
-```
-
-## Output Format
-
-### JSON
-
-```json
-{
-  "target": "192.168.1.1",
-  "ports": {
-    "22": "ssh",
-    "80": "http",
-    "443": "https"
-  },
-  "os": "Linux 5.10.0",
-  "timestamp": "2024-01-01T12:00:00"
-}
-```
-
-### Markdown
-
-```markdown
-# Scan Results for 192.168.1.1
-
-**Timestamp:** 2024-01-01T12:00:00
-
-## Open Ports
-
-- Port 22: ssh
-- Port 80: http
-- Port 443: https
-
-## OS
-
-Linux 5.10.0
-```
-
-## Requirements
-
-- Python 3.11+
-- `typer` — CLI framework
-- `rich` — Beautiful terminal output
-- `pydantic` — Data validation
-
-## License
-
-MIT
-
-## Responsible Disclosure
-
-Full RAVEN autonomous red team capability is available for authorized penetration testing and red team engagements only. This CE edition is for infrastructure visibility and defensive security assessment.
-
-To conduct authorized security assessments with full autonomous red team capability, contact Red Specter Security Research Ltd.
+Leave a star on GitHub. That is all we ask.
 
 ---
 
-**SPECTER RAVEN CE v1.0.0** | Engineered by Richard Barron | Red Specter Security Research Ltd
+**Red Specter Security Research Ltd** | [red-specter.co.uk](https://red-specter.co.uk) | richard@red-specter.co.uk
