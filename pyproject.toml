@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "specter-raven-ce"
-version = "1.0.1"
+version = "1.0.2"
 description = "SPECTER RAVEN CE — See what an autonomous red team sees when it looks at your infrastructure"
 readme = "README.md"
 license = {text = "MIT"}
@@ -26,6 +26,10 @@ dependencies = [
     "cryptography>=41.0.0",
     "requests>=2.31.0",
 ]
+
+[project.urls]
+Homepage = "https://red-specter.co.uk"
+Repository = "https://github.com/RichardBarron27/red-specter-specter-raven-ce"
 
 [project.optional-dependencies]
 dev = [
